@@ -127,10 +127,12 @@
   #endif
   #define oled_reset -1
   #define oled1_address 0x3C
+  #define OLED1_ROTATION 2
 #endif
 
 #if (defined usei2c && defined useoled2) //2nd display, i2c mode
     #define oled2_address 0x3D
+    #define OLED2_ROTATION 2
 #endif
 
 #if (!defined usei2c && defined useoled1 && defined ESP32) //one display, ESP32/Hardware SPI Mode
