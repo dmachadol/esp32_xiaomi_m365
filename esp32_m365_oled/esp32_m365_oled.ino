@@ -1777,8 +1777,6 @@ void oled_switchscreens() {
 #ifdef useoled1
   void oled1_update() {
     uint8_t line;
-    lowest=10000;
-    highest=0;
     timestamp_oled1draw=micros();
     display1.clearDisplay();
     
@@ -1948,8 +1946,8 @@ void oled_switchscreens() {
                   display1.printf("06: %5.3f  ",(float)bmsparsed->Cell6Voltage/1000.0f);
                   display1.printf("07: %5.3f ",(float)bmsparsed->Cell7Voltage/1000.0f);
                   display1.printf("08: %5.3f  ",(float)bmsparsed->Cell8Voltage/1000.0f);
-                  display1.printf("10: %5.3f  ",(float)bmsparsed->Cell10Voltage/1000.0f);
                   display1.printf("09: %5.3f ",(float)bmsparsed->Cell9Voltage/1000.0f);
+                  display1.printf("10: %5.3f  ",(float)bmsparsed->Cell10Voltage/1000.0f);
                   #ifdef batt12s
                     display1.printf("11: %5.3f ",(float)bmsparsed->Cell11Voltage/1000.0f);
                     display1.printf("12: %5.3f  ",(float)bmsparsed->Cell12Voltage/1000.0f);
