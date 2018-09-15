@@ -261,18 +261,20 @@
   #define wlanapconnecttimeout 60000 //timeout in ap mode until client needs to connect / ap mode turns off
   unsigned long wlanconnecttimestamp = 0;
 
-#ifdef usetelnetserver
 //TELNET
+#ifdef usetelnetserver
   WiFiServer telnetserver(36523);
   WiFiClient telnetclient;
-  #ifdef userawserver
-    WiFiServer rawserver(36524);
-    WiFiClient rawclient;
-  #endif
-  #ifdef usepacketserver
-    WiFiServer packetserver(36525);
-    WiFiClient packetclient;
-  #endif
+#endif
+#ifdef userawserver
+  WiFiServer rawserver(36524);
+  WiFiClient rawclient;
+#endif
+#ifdef usepacketserver
+  WiFiServer packetserver(36525);
+  WiFiClient packetclient;
+#endif
+#if ( defined usetelnetserver || defined userawserver || defined usepacketserver )
   uint8_t telnetstate = 0;
   uint8_t telnetstateold = 0;
   uint8_t telnetrawstate = 0;
@@ -302,6 +304,7 @@
   #define ts_ble_array 7
   #define ts_bms_array 8
   #define ts_x1_array 9
+  #define ts_help 99
   uint8_t telnetscreen = ts_statistics;
   uint8_t telnetscreenold = telnetscreen;
 
@@ -1002,6 +1005,24 @@ void telnet_refreshscreen() {
           case ts_statistics:
               telnetclient.print("M365 Statistics Screen");
             break;
+                      case ts_statistics:
+              telnetclient.print("M365 Statistics Screen");
+            break;
+          case ts_help:
+            telnetclient.println("M365 Help Screen");
+            telnetclient.println();
+            telnetclient.println("Menu keys");
+            telnetclient.println();
+            telnetclient.println("t/T: M365 Telemetrie Screen");
+            telnetclient.println("s/S: M365 Statistics Screen");
+            telnetclient.println("r/r: M365 Reset Statistics Screen");
+            telnetclient.println("e/E: M365 ESC Array/RAW Screen");
+            telnetclient.println("n/N: M365 BLE Array/RAW Screen"); 
+            telnetclient.println("b/B: M365 BMS Array/RAW Screen"); 
+            telnetclient.println("x/X: M365 X1 Array/RAW Screen"); 
+            telnetclient.println();
+            telnetclient.println("h/H: This Help Screen");
+            telnetclient.println("q/Q: Disconnect");
         }
         tmpi++;
         if (tmpi % 2) {
@@ -1124,20 +1145,26 @@ void telnet_refreshscreen() {
               telnetnextrefreshtimestamp=millis()+telnetrefreshanyscreen;
               
             break;
+           case ts_help:
+              telnetnextrefreshtimestamp=millis()+telnetrefreshanyscreen;
+            break;
         }
         yield();
     }
   //} //i 0 to maxclients
   //DebugSerial.printf("---TELNET--- %d\r\n",millis());
 }
+#endif
 
-void handle_telnet() {
+#if ( defined usetelnetserver || defined userawserver || defined usepacketserver )
+  void handle_telnet() {
   timestamp_telnetstart=micros();
   boolean hc = false;
    switch(telnetstate) {
     case telnetoff:
       break;
     case telnetturnon:
+  #ifdef usetelnetserver
         telnetserver.begin();
         telnetserver.setNoDelay(true);
         DebugSerial.print("### Telnet Debug Server @ ");
@@ -1147,7 +1174,8 @@ void handle_telnet() {
           DebugSerial.print(WiFi.localIP());  
         }
         DebugSerial.println(":36523");
-#ifdef userawserver
+  #endif
+  #ifdef userawserver
         rawserver.begin();
         rawserver.setNoDelay(true);
         DebugSerial.print("### Telnet RAW Server @ ");
@@ -1157,8 +1185,8 @@ void handle_telnet() {
           DebugSerial.print(WiFi.localIP());  
         }
         DebugSerial.println(":36524");
-#endif        
-#ifdef usepacketserver
+  #endif        
+  #ifdef usepacketserver
         packetserver.begin();
         packetserver.setNoDelay(true);
         DebugSerial.print("### Telnet PACKET Server @ ");
@@ -1168,7 +1196,7 @@ void handle_telnet() {
           DebugSerial.print(WiFi.localIP());  
         }
         DebugSerial.println(":36525");
-#endif        
+  #endif        
 
         
 
@@ -1176,6 +1204,7 @@ void handle_telnet() {
         userconnecttimestamp = millis()+userconnecttimeout;  
       break;
     case telnetlistening: 
+  #ifdef usetelnetserver       
             if (telnetserver.hasClient()) {
               //for(i = 0; i < MAX_SRV_CLIENTS; i++){
                 //find free/disconnected spot
@@ -1200,7 +1229,8 @@ void handle_telnet() {
               DebugSerial.println("### Telnet rejected connection (max Clients)");
             }*/
           }
-#ifdef userawserver
+  #endif
+  #ifdef userawserver
           if (rawserver.hasClient()) {
             //for(i = 0; i < MAX_SRV_CLIENTS; i++){
               //find free/disconnected spot
@@ -1219,8 +1249,8 @@ void handle_telnet() {
               }
             //}
           }
-#endif
-#ifdef usepacketserver
+  #endif
+  #ifdef usepacketserver
           if (packetserver.hasClient()) {
             //for(i = 0; i < MAX_SRV_CLIENTS; i++){
               //find free/disconnected spot
@@ -1239,93 +1269,115 @@ void handle_telnet() {
               }
             //}
           }
-#endif
+  #endif
           if (userconnecttimestamp<millis()) {
             telnetstate = telnetturnoff;
           }
       break;
-    case telnetclientconnected: 
+    case telnetclientconnected:
+  #ifdef usetelnetserver
         //TODO check if clients are still connected... else start client connect timer and fall back to listening mode
         hc = false;
         //for(i = 0; i < MAX_SRV_CLIENTS; i++){
           if (telnetclient && telnetclient.connected()) { hc=true; }
-        //} //i 0 to maxclients
-#ifdef userawserver
+        //} //i 0 to maxclients 
+  #endif
+  #ifdef userawserver
         if (rawclient && rawclient.connected()) { hc=true; }
-#endif
-#ifdef usepacketserver
+  #endif
+  #ifdef usepacketserver
         if (packetclient && packetclient.connected()) { hc=true; }
-#endif
+  #endif
+  #ifdef usetelnetserver
+          if (!hc) {
+            //no more clients, restart listening timer....
+            telnetstate = telnetturnon;
+            DebugSerial.println("### Telnet lost all clients - restarting telnet");
+            telnetscreen=ts_help; //Reset screen on telnet server for new login.
+            #ifdef usestatusled
+              ledontime=500; ledofftime=500; ledcurrenttime = millis();
+            #endif
+          } else {
+            //still has clients, update telnet stuff
+              if (telnetnextrefreshtimestamp<millis()) {
+                    telnet_refreshscreen();
+              } //telnetrefreshtimer
 
-        if (!hc) {
-          //no more clients, restart listening timer....
-          telnetstate = telnetturnon;
-          DebugSerial.println("### Telnet lost all clients - restarting telnet");
-          #ifdef usestatusled
-            ledontime=500; ledofftime=500; ledcurrenttime = millis();
-          #endif
-        } else {
-          //still has clients, update telnet stuff
-            if (telnetnextrefreshtimestamp<millis()) {
-                  telnet_refreshscreen();
-            } //telnetrefreshtimer
-
-        } //else !hc
-        //check clients for data
-        //for(i = 0; i < MAX_SRV_CLIENTS; i++){
-          if (telnetclient && telnetclient.connected()){
-            if(telnetclient.available()){
-              //get data from the telnet client and push it to the UART
-              uint8_t tcmd = telnetclient.read();
-              DebugSerial.printf("Telnet Command: %02X\r\n",tcmd);
-              switch (tcmd) {
-                case 0x73: telnetscreen=ts_statistics; break; //s
-                case 0x74: telnetscreen=ts_telemetrie; break; //t
-                case 0x65: telnetscreen=ts_esc_raw; break; //e
-                case 0x62: telnetscreen=ts_bms_raw; break; //b
-                case 0x6E: telnetscreen=ts_ble_raw; break; //n
-                case 0x78: telnetscreen=ts_x1_raw; break; //x
-                case 0x45: telnetscreen=ts_esc_array; break; //E
-                case 0x42: telnetscreen=ts_bms_array; break; //B
-                case 0x4E: telnetscreen=ts_ble_array; break; //N
-                case 0x58: telnetscreen=ts_x1_array; break;  //X
-                case 0x72: reset_statistics(); break;  //r
-              } //switch
-              //while(serverClients[i].available()) M365DebugSerial.write(serverClients[i].read());
-            } //serverclients available
-          } //if connected
-        //}  //for i
-#ifdef userawserver        
+          } //else !hc
+          //check clients for data
+          //for(i = 0; i < MAX_SRV_CLIENTS; i++){
+            if (telnetclient && telnetclient.connected()){
+              if(telnetclient.available()){
+                //get data from the telnet client and push it to the UART
+                uint8_t tcmd = telnetclient.read();
+                DebugSerial.printf("Telnet Command: %02X\r\n",tcmd);
+                switch (tcmd) {
+                  case 0x83: 
+                  case 0x73: telnetscreen=ts_statistics; break; //s,S
+                  case 0x84:
+                  case 0x74: telnetscreen=ts_telemetrie; break; //t,T
+                  case 0x68: 
+                  case 0x48: telnetscreen=ts_help; break;  //h,H
+                  case 0x65: telnetscreen=ts_esc_raw; break; //e
+                  case 0x45: telnetscreen=ts_esc_array; break; //E
+                  case 0x62: telnetscreen=ts_bms_raw; break; //b
+                  case 0x42: telnetscreen=ts_bms_array; break; //B
+                  case 0x6E: telnetscreen=ts_ble_raw; break; //n
+                  case 0x4E: telnetscreen=ts_ble_array; break; //N
+                  case 0x78: telnetscreen=ts_x1_raw; break; //x
+                  case 0x58: telnetscreen=ts_x1_array; break;  //X
+                  case 0x72: 
+                  case 0x52: reset_statistics(); break;  //r,R
+                  case 0x51:  
+                  case 0x71: 
+                    telnetclient.stop(); 
+                    DebugSerial.println("### Telnet connection closed by client");
+                    break;                            //q,Q
+                  case 0x0D: 
+                  case 0x0A: break; // CR,LF
+                  default: 
+                    // Invalid Key show help screen
+                    telnetscreen=ts_help;               
+                } //switch
+                //while(serverClients[i].available()) M365DebugSerial.write(serverClients[i].read());
+              } //serverclients available
+            } //if connected
+          //}  //for i
+  #endif
+  #ifdef userawserver        
         //TODO: Check RAW Client for Data and send to bus? immediately send or queue and send in next free timeslot?
-#endif        
-      break;
-    case telnetdisconnectclients:
-        if (telnetclient) telnetclient.stop();
-        #ifdef userawserver
-          if (rawclient) rawclient.stop();
-        #endif        
-        #ifdef userawserver
-          if (packetclient) packetclient.stop();
-        #endif
-        telnetstate = telnetturnoff;
-      break;
-    case telnetturnoff:
-        #ifdef ESP32
-          telnetserver.end();
-        #endif
-        #if defined userawserver && defined ESP32
-          rawserver.end();
-        #endif      
-        #if defined usepacketserver && defined ESP32
-          packetserver.end();
-        #endif
-        wlanstate=wlanturnoff; 
-        telnetstate = telnetoff;
-      break;
-   } //switch (telnetstate)
-   duration_telnet = micros()-timestamp_telnetstart;
-} //handle_telnet
-#endif //usetelnetserver
+  #endif        
+        break;
+      case telnetdisconnectclients:
+          #ifdef usetelnetserver
+            if (telnetclient) telnetclient.stop();
+          #endif
+          #ifdef userawserver
+            if (rawclient) rawclient.stop();
+          #endif        
+          #ifdef userawserver
+            if (packetclient) packetclient.stop();
+          #endif
+          telnetstate = telnetturnoff;
+        break;
+      case telnetturnoff:
+          #ifdef ESP32
+            telnetserver.end();
+          #endif
+          #if defined userawserver && defined ESP32
+            rawserver.end();
+          #endif      
+          #if defined usepacketserver && defined ESP32
+            packetserver.end();
+          #endif
+          wlanstate=wlanturnoff; 
+          telnetstate = telnetoff;
+        break;
+      } //switch (telnetstate)
+     duration_telnet = micros()-timestamp_telnetstart;
+  } //handle_telnet
+  //usetelnetserver
+#endif
 
 #ifdef ESP32
 void WiFiEvent(WiFiEvent_t event) {
