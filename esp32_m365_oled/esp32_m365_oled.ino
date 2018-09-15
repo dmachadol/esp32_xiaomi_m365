@@ -2047,7 +2047,9 @@ void oled_switchscreens() {
           display1.clearDisplay();
           display1.setFont();
           display1.setCursor(0,0);
-          display1.drawFastHLine(0,8,windowsubpos,WHITE);
+      
+          //display1.drawFastHLine(0,8,windowsubpos,WHITE);
+      
           #if !defined useoled2
           switch (subscreen) {
             case 1: //Trip Info: Average Speed, Distance, Time, Average Speed 
